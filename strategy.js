@@ -21,7 +21,7 @@ module.exports = {
         this.option('srsi_k', '%K line', Number, 14)
         this.option('srsi_d', '%D line', Number, 3)
 
-        this.option('oversold_rsi', 'buy when RSI reaches or drops below this value', Number, 40)
+        this.option('oversold_rsi', 'buy when RSI reaches or drops below this value', Number, 50)
 
         this.option('sma_short_period', 'number of periods for the shorter SMA', Number, 12)
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
@@ -57,6 +57,15 @@ module.exports = {
 
                 s.srsi_crossover = false
             }
+
+            if (s.period.macd_histogram > s.lookback[0].macd_histogram && s.lookback[0].macd_histogram > s.lookback[1].macd_histogram) {
+
+                s.macd_trend = 'up'
+            }
+            else if (s.period.macd_histogram <= s.lookback[0].macd_histogram && s.lookback[0].macd_histogram <= s.lookback[1].macd_histogram) {
+
+                s.macd_trend = 'down'
+            }
         }
     },
 
@@ -65,16 +74,18 @@ module.exports = {
 
             if (typeof s.period.macd_histogram === 'number' && typeof s.lookback[0].macd_histogram === 'number' && typeof s.period.srsi_K === 'number' && typeof s.period.srsi_D === 'number') {
 
-                if (s.srsi_crossover == true && s.period.macd_histogram > 0 && s.period.rsi > s.options.oversold_rsi) {
+                if (s.srsi_crossover == true && s.macd_trend == 'up' && s.period.rsi > s.options.oversold_rsi) {
 
-                    s.srsi_crossover = false
+                    s.macd_trend = null
+                    s.srsi_crossover = null
                     s.signal = 'buy'
                     return cb();
                 }
 
-                else if (s.srsi_crossover == 0 && s.period.macd_histogram <= 0 && s.period.rsi <= s.options.oversold_rsi) {
+                else if (s.srsi_crossover == false && s.macd_trend == 'down' && s.period.rsi <= s.options.oversold_rsi) {
 
-                    s.srsi_crossover = false
+                    s.macd_trend = null
+                    s.srsi_crossover = null
                     s.signal = 'sell'
                     return cb();
                 }
