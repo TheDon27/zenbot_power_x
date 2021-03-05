@@ -17,6 +17,7 @@ module.exports = {
         this.option('min_periods', 'min. number of history periods', Number, 26)
 
         this.option('rsi_periods', 'number of RSI periods', Number, 7)
+        this.option('ssl_periods', 'number of RSI periods', Number, 10)
 
         this.option('srsi_k', '%K line', Number, 14)
         this.option('srsi_d', '%D line', Number, 3)
@@ -26,6 +27,8 @@ module.exports = {
         this.option('sma_short_period', 'number of periods for the shorter SMA', Number, 12)
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
         this.option('signal_period', 'number of periods for the signal SMA', Number, 9)
+
+
     },
 
     calculate: function (s) {
@@ -47,25 +50,23 @@ module.exports = {
             }
         }
 
-        if (!s.in_preroll) {
+        sma(s, 'ssl_high', s.options.ssl_periods, 'high')
+        sma(s, 'ssl_low', s.options.ssl_periods, 'low')
 
-            if (crossover(s, 'srsi_K', 'srsi_D')) {
+        if (s.period.close > s.period.ssl_high) {
+            s.period.ssl_crossover = true
+        }
+        else if (s.period.close < s.period.ssl_low) {
+            s.period.ssl_crossover = false
+        }
 
-                s.srsi_crossover = true
-            }
-            else if (crossunder(s, 'srsi_K', 'srsi_D')) {
+        if (crossover(s, 'srsi_K', 'srsi_D')) {
 
-                s.srsi_crossover = false
-            }
+            s.srsi_crossover = true
+        }
+        else if (crossunder(s, 'srsi_K', 'srsi_D')) {
 
-            if (s.period.macd_histogram > s.lookback[0].macd_histogram && s.lookback[0].macd_histogram > s.lookback[1].macd_histogram) {
-
-                s.macd_trend = 'up'
-            }
-            else if (s.period.macd_histogram <= s.lookback[0].macd_histogram && s.lookback[0].macd_histogram <= s.lookback[1].macd_histogram) {
-
-                s.macd_trend = 'down'
-            }
+            s.srsi_crossover = false
         }
     },
 
@@ -74,26 +75,25 @@ module.exports = {
 
             if (typeof s.period.macd_histogram === 'number' && typeof s.lookback[0].macd_histogram === 'number' && typeof s.period.srsi_K === 'number' && typeof s.period.srsi_D === 'number') {
 
-                if (s.srsi_crossover == true && s.macd_trend == 'up' && s.period.rsi > s.options.oversold_rsi) {
+                if (s.srsi_crossover == true && s.period.ssl_crossover == true && s.period.rsi > s.options.oversold_rsi) {
 
-                    s.macd_trend = null
                     s.srsi_crossover = null
                     s.signal = 'buy'
                     return cb();
                 }
 
-                else if (s.srsi_crossover == false && s.macd_trend == 'down' && s.period.rsi <= s.options.oversold_rsi) {
+                if (s.srsi_crossover == false && s.period.ssl_crossover == false && s.period.close < s.lookback[0].close && s.period.rsi <= s.options.oversold_rsi) {
 
-                    s.macd_trend = null
+                    s.ssl_crossover == null
                     s.srsi_crossover = null
                     s.signal = 'sell'
                     return cb();
                 }
+                else {
+                    s.signal = null
+                    return cb();
+                }
             }
-
-
-            // Hold
-            //s.signal = null;
         }
         cb()
     },
@@ -107,6 +107,12 @@ module.exports = {
             else if (s.period.macd_histogram < 0) {
                 color = 'red'
             }
+            /*
+            cols.push(z(8, n(s.period.ssl_high).format('00.00'), ' ').green)
+            cols.push(z(8, n(s.period.ssl_low).format('00.00'), ' ').red)
+            cols.push(z(8, n(s.period.close).format('00.00'), ' ').yellow)
+            cols.push(z(8, n(s.period.ssl_crossover).format('00.00'), ' ').cyan)
+            */
             cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
             cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
             cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
