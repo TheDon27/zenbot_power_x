@@ -64,7 +64,7 @@ module.exports = {
 
             s.srsi_crossover = true
         }
-        else if (crossunder(s, 'srsi_K', 'srsi_D')) {
+        else if (crossunder(s, 'srsi_K', 'srsi_D') && s.period.srsi_K > s.options.oversold_rsi) {
 
             s.srsi_crossover = false
         }
@@ -84,12 +84,12 @@ module.exports = {
 
                 if (s.srsi_crossover == false && s.period.ssl_crossover == false && s.period.close < s.lookback[0].close && s.period.rsi <= s.options.oversold_rsi) {
 
-                    s.ssl_crossover == null
                     s.srsi_crossover = null
                     s.signal = 'sell'
                     return cb();
                 }
                 else {
+
                     s.signal = null
                     return cb();
                 }
