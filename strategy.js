@@ -28,6 +28,7 @@ module.exports = {
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
         this.option('signal_period', 'number of periods for the signal SMA', Number, 9)
 
+        this.option('sell_threshold_pct', 'buy when RSI reaches or drops below this value', Number, 2)
 
     },
 
@@ -64,6 +65,13 @@ module.exports = {
         else if (crossunder(s, 'sslUp', 'sslDown')) {
 
             s.ssl_trigger = false
+
+            s.stop_price = ((100 - s.options.sell_threshold_pct) / 100) * s.period.close
+        }
+
+        if(s.period.open < s.stop_price)
+        {
+            s.sell_stop = true
         }
 
         if (crossover(s, 'srsi_K', 'srsi_D')) {
@@ -85,14 +93,16 @@ module.exports = {
 
                     s.ssl_trigger = null
                     s.srsi_crossover = null
+                    s.sell_stop = null
                     s.signal = 'buy'
                     return cb();
                 }
 
-                if (s.srsi_crossover == false && s.ssl_trigger == false && s.period.rsi <= s.options.oversold_rsi) {
+                if (s.srsi_crossover == false && s.ssl_trigger == false && s.sell_stop == true && s.period.rsi <= s.options.overbought_rsi) {
 
                     s.ssl_trigger = null
                     s.srsi_crossover = null
+                    s.sell_stop = null
                     s.signal = 'sell'
                     return cb();
                 }
@@ -115,6 +125,7 @@ module.exports = {
             else if (s.period.macd_histogram < 0) {
                 color = 'red'
             }
+            cols.push(z(8, n(s.stop_price).format('00.00'), ' ').yellow)
             cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
             cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
             cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
