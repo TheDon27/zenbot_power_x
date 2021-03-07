@@ -12,11 +12,11 @@ module.exports = {
     description: 'PowerX Strategy',
 
     getOptions: function () {
-        this.option('period', 'period length, same as --period_length', String, '30m')
-        this.option('period_length', 'period length, same as --period', String, '30m')
+        this.option('period', 'period length, same as --period_length', String, '45m')
+        this.option('period_length', 'period length, same as --period', String, '45m')
         this.option('min_periods', 'min. number of history periods', Number, 26)
 
-        this.option('rsi_periods', 'number of RSI periods', Number, 14)
+        this.option('rsi_periods', 'number of RSI periods', Number, 7)
         this.option('ssl_periods', 'number of RSI periods', Number, 10)
 
         this.option('srsi_k', '%K line', Number, 14)
@@ -27,6 +27,8 @@ module.exports = {
         this.option('sma_short_period', 'number of periods for the shorter SMA', Number, 12)
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
         this.option('signal_period', 'number of periods for the signal SMA', Number, 9)
+
+        this.option('sell_stop_pct', ' ', Number, 1)
 
 
     },
@@ -64,13 +66,21 @@ module.exports = {
         else if (crossunder(s, 'sslUp', 'sslDown')) {
 
             s.ssl_trigger = false
+
+            s.stop_price = ((100 - s.options.sell_stop_pct) / 100) * s.period.close
+        }
+
+        if(s.period.close < s.stop_price)
+        {
+
+            s.sell_stop = true
         }
 
         if (crossover(s, 'srsi_K', 'srsi_D')) {
 
             s.srsi_crossover = true
         }
-        else if (crossunder(s, 'srsi_K', 'srsi_D') && s.period.srsi_K > s.options.oversold_rsi) {
+        else if (crossunder(s, 'srsi_K', 'srsi_D')) {
 
             s.srsi_crossover = false
         }
@@ -89,10 +99,12 @@ module.exports = {
                     return cb();
                 }
 
-                if (s.srsi_crossover == false && s.ssl_trigger == false && s.period.rsi <= s.options.oversold_rsi) {
+                if (s.srsi_crossover == false && s.ssl_trigger == false && s.sell_stop == true && s.period.rsi <= s.options.oversold_rsi) {
 
                     s.ssl_trigger = null
                     s.srsi_crossover = null
+                    s.stop_price = null
+                    s.sell_stop = null
                     s.signal = 'sell'
                     return cb();
                 }
@@ -115,9 +127,9 @@ module.exports = {
             else if (s.period.macd_histogram < 0) {
                 color = 'red'
             }
-            cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
             cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
             cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
+            cols.push(z(8, n(s.stop_price).format('00.00'), ' ').yellow)
         }
         else {
             cols.push('         ')
