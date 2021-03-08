@@ -12,8 +12,8 @@ module.exports = {
     description: 'PowerX Strategy',
 
     getOptions: function () {
-        this.option('period', 'period length, same as --period_length', String, '45m')
-        this.option('period_length', 'period length, same as --period', String, '45m')
+        this.option('period', 'period length, same as --period_length', String, '15m')
+        this.option('period_length', 'period length, same as --period', String, '15m')
         this.option('min_periods', 'min. number of history periods', Number, 26)
 
         this.option('rsi_periods', 'number of RSI periods', Number, 7)
@@ -127,9 +127,9 @@ module.exports = {
             else if (s.period.macd_histogram < 0) {
                 color = 'red'
             }
+            cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
             cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
             cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
-            cols.push(z(8, n(s.stop_price).format('00.00'), ' ').yellow)
         }
         else {
             cols.push('         ')
