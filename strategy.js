@@ -29,7 +29,7 @@ module.exports = {
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
         this.option('signal_period', 'number of periods for the signal SMA', Number, 9)
 
-        this.option('sell_stop_pct', '  ', Number, 4)
+        this.option('sell_stop_pct', '  ', Number, 1)
     },
 
     calculate: function (s) {
