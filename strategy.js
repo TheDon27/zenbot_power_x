@@ -17,20 +17,19 @@ module.exports = {
         this.option('min_periods', 'min. number of history periods', Number, 26)
 
         this.option('rsi_periods', 'number of RSI periods', Number, 7)
-        this.option('ssl_periods', 'number of RSI periods', Number, 10)
+        this.option('srsi_periods', 'number of SRSI periods', Number, 14)
+        this.option('ssl_periods', 'number of SSL periods', Number, 10)
 
         this.option('srsi_k', '%K line', Number, 14)
         this.option('srsi_d', '%D line', Number, 3)
 
-        this.option('oversold_rsi', 'buy when RSI reaches or drops below this value', Number, 50)
+        this.option('oversold_rsi', 'buy when RSI reaches or drops below this value', Number, 45)
 
         this.option('sma_short_period', 'number of periods for the shorter SMA', Number, 12)
         this.option('sma_long_period', 'number of periods for the longer SMA', Number, 26)
         this.option('signal_period', 'number of periods for the signal SMA', Number, 9)
 
-        this.option('sell_stop_pct', ' ', Number, 4)
-
-
+        this.option('sell_stop_pct', '  ', Number, 4)
     },
 
     calculate: function (s) {
@@ -39,13 +38,13 @@ module.exports = {
         rsi(s, 'rsi', s.options.rsi_periods)
 
         // compute Stochastic RSI
-        srsi(s, 'srsi', s.options.rsi_periods, s.options.srsi_k, s.options.srsi_d)
+        srsi(s, 'srsi', s.options.srsi_periods, s.options.srsi_k, s.options.srsi_d)
 
         if (crossover(s, 'srsi_K', 'srsi_D')) {
 
             s.srsi_crossover = true
         }
-        else if ((crossunder(s, 'srsi_K', 'srsi_D')) && s.period.srsi_K > s.options.oversold_rsi) {
+        else if (crossunder(s, 'srsi_K', 'srsi_D')) {
 
             s.srsi_crossover = false
         }
@@ -66,7 +65,7 @@ module.exports = {
 
         s.Hlv = s.period.close > s.period.ssl_high ? 1 : s.period.close < s.period.ssl_low ? -1 : 0
         s.period.sslDown = s.Hlv < 0 ? s.period.ssl_high : s.period.ssl_low
-        s.period.sslUp   = s.Hlv < 0 ? s.period.ssl_low : s.period.ssl_high
+        s.period.sslUp = s.Hlv < 0 ? s.period.ssl_low : s.period.ssl_high
 
         if (crossover(s, 'sslUp', 'sslDown')) {
 
@@ -79,8 +78,7 @@ module.exports = {
             s.stop_price = ((100 - s.options.sell_stop_pct) / 100) * s.period.close
         }
 
-        if(s.period.close < s.stop_price)
-        {
+        if (s.period.close < s.stop_price) {
 
             s.sell_stop = true
         }
@@ -89,27 +87,24 @@ module.exports = {
     onPeriod: function (s, cb) {
         if (!s.in_preroll) {
 
-            if (typeof s.period.macd_histogram === 'number' && typeof s.lookback[0].macd_histogram === 'number' && typeof s.period.srsi_K === 'number' && typeof s.period.srsi_D === 'number') {
+            if (s.srsi_crossover == true && s.ssl_trigger == true && s.period.rsi > s.options.oversold_rsi && s.period.srsi_D > s.options.oversold_rsi) {
 
-                if (s.srsi_crossover == true && s.ssl_trigger == true) {
-
-                    s.signal = 'buy'
-                    return cb();
-                }
-
-                if (s.srsi_crossover == false && s.ssl_trigger == false && s.sell_stop == true) {
-
-                    s.stop_price = 0
-                    s.sell_stop = null
-                    s.signal = 'sell'
-                    return cb();
-                }
-                else {
-
-                    s.signal = null
-                    return cb();
-                }
+                s.ssl_trigger = null
+                s.signal = 'buy'
+                return cb();
             }
+
+            else if (s.srsi_crossover == false && s.ssl_trigger == false && s.sell_stop == true && s.period.rsi <= s.options.oversold_rsi && s.period.srsi_D <= s.options.oversold_rsi) {
+
+                s.ssl_trigger = null
+                s.stop_price = 0
+                s.sell_stop = null
+                s.signal = 'sell'
+                return cb();
+            }
+
+            // Hold
+            //s.signal = null;
         }
         cb()
     },
@@ -123,10 +118,9 @@ module.exports = {
             else if (s.period.macd_histogram < 0) {
                 color = 'red'
             }
-            cols.push(z(8, n(s.stop_price).format('00.00'), ' ').cyan)
-            //cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
-            //cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
-            //cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
+            cols.push(z(8, n(s.period.macd_histogram).format('+00.0000'), ' ')[color])
+            cols.push(z(8, n(s.period.srsi_K).format('00.00'), ' ').cyan)
+            cols.push(z(8, n(s.period.srsi_D).format('00.00'), ' ').yellow)
         }
         else {
             cols.push('         ')
